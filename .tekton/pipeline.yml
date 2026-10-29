@@ -1,0 +1,67 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: cd-pipeline
+spec:
+  workspaces:
+    - name: pipeline-workspace
+  params:
+    - name: repo-url
+    - name: branch
+      default: main
+    - name: build-image
+  tasks:
+    - name: cleanup
+      taskRef:
+        name: cleanup
+      workspaces:
+        - name: source
+          workspace: pipeline-workspace
+
+    - name: git-clone
+      taskRef:
+        name: git-clone
+      runAfter: [cleanup]
+      workspaces:
+        - name: output
+          workspace: pipeline-workspace
+      params:
+        - name: url
+          value: $(params.repo-url)
+        - name: revision
+          value: $(params.branch)
+
+    - name: flake8
+      taskRef:
+        name: flake8
+      runAfter: [git-clone]
+      workspaces:
+        - name: source
+          workspace: pipeline-workspace
+
+    - name: nose
+      taskRef:
+        name: nose
+      runAfter: [flake8]
+      workspaces:
+        - name: source
+          workspace: pipeline-workspace
+
+    - name: buildah
+      taskRef:
+        name: buildah
+      runAfter: [nose]
+      workspaces:
+        - name: source
+          workspace: pipeline-workspace
+      params:
+        - name: IMAGE
+          value: $(params.build-image)
+
+    - name: deploy
+      taskRef:
+        name: openshift-client
+      runAfter: [buildah]
+      params:
+        - name: SCRIPT
+          value: oc create deploy cd-pipeline --image=$(params.build-image)
