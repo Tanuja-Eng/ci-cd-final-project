@@ -21,6 +21,7 @@ spec:
     - name: git-clone
       taskRef:
         name: git-clone
+        kind: ClusterTask
       runAfter: [cleanup]
       workspaces:
         - name: output
@@ -50,6 +51,7 @@ spec:
     - name: buildah
       taskRef:
         name: buildah
+        kind: ClusterTask
       runAfter: [nose]
       workspaces:
         - name: source
@@ -61,6 +63,7 @@ spec:
     - name: deploy
       taskRef:
         name: openshift-client
+        kind: ClusterTask
       runAfter: [buildah]
       params:
         - name: SCRIPT
